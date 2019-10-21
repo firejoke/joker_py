@@ -2,7 +2,7 @@ LOG_Level: WARN
 Sync:
   - source: E:\PycharmProjects\NGD_HKBANK_version
     destinations:
-    - ip: 192.168.8.150
+    - host: 192.168.8.150
       user: root
       password: joker
       port: '22'
@@ -15,7 +15,7 @@ Sync:
     ignore_directories: false
   - source: E:\PycharmProjects\NGD_CEPH_version
     destinations:
-      - ip: 192.168.8.150
+      - host: 192.168.8.150
         user: root
         password: joker
         port: '22'

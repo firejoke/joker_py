@@ -6,7 +6,7 @@ import socket
 
 from watchdog.events import PatternMatchingEventHandler
 
-from util import ip_check, ConnectionException, LOG
+from util import ip_check, ConnectionException, get_dest_path
 
 from fabric import Connection
 from paramiko import SSHException
@@ -20,19 +20,19 @@ class SyncEventHandler(PatternMatchingEventHandler):
     def __init__(self, LOG, source, destinations, patterns=None,
                  ignore_patterns=None, ignore_directories=False):
         """"""
-        super(SyncEventHandler, self).__init__(
+        super().__init__(
                 patterns, ignore_patterns, ignore_directories,
                 case_sensitive=True)
         if not isinstance(destinations, list):
-            raise TypeError('dst must be dict')
+            raise TypeError('dst must be list')
         for dst in destinations:
-            if dst.keys() != {'ip', 'port', 'user', 'password', 'path'}:
-                raise KeyError("host keys must be {'ip', 'port', 'user', "
+            if dst.keys() != {'host', 'port', 'user', 'password', 'path'}:
+                raise KeyError("host keys must be {'host', 'port', 'user', "
                                "'password', 'path'}")
             if not ip_check(dst['ip']):
                 raise ConnectionException('ip error')
             # 测试连接是否可用
-            with Connection(host=dst['ip'], port=dst['port'], user=dst['user'],
+            with Connection(host=dst['host'], port=dst['port'], user=dst['user'],
                             connect_kwargs={'password': dst['password']},
                             connect_timeout=30) as c:
                 try:
@@ -53,7 +53,7 @@ LOG_Level: WARN
 Sync:
   - source: E:\\PycharmProjects\\NGD_HKBANK_version
     destinations:
-    - ip: 192.168.8.150
+    - host: 192.168.8.150
       user: root
       password: pwd
       port: '22'
@@ -66,7 +66,7 @@ Sync:
     ignore_directories: false
   - source: E:\\PycharmProjects\\NGD_CEPH_version
     destinations:
-      - ip: 192.168.8.150
+      - host: 192.168.8.150
         user: root
         password: joker
         port: '22'
@@ -92,39 +92,52 @@ Sync:
         if ignore:
             return
         else:
-            super(SyncEventHandler, self).dispatch(event)
+            super().dispatch(event)
 
     def on_any_event(self, event):
         """
         TODO: 报警系统
         """
-        super(SyncEventHandler, self).on_any_event(event)
+        super().on_any_event(event)
 
     def on_created(self, event):
-        super(SyncEventHandler, self).on_created(event)
-        self.LOG.warning('Create: %s, event: %s' % (
-            event.src_path, event.__dict__))
+        super().on_created(event)
+        self.LOG.warning(f'Create: {event.src_path}')
 
         for dst in self.dests:
-            """
-            TODO: 上传创建的新文件到目标主机
-            """
-
+            dst_path = get_dest_path(self.src, event.src_path, dst['path'])
+            with Connection(host=dst['host'], port=dst['port'],
+                            user=dst['user'],
+                            connect_kwargs={'password': dst['password']},
+                            connect_timeout=30) as c:
+                # unix command
+                if dst_path.startswith('/'):
+                    if event.is_directory:
+                        self.LOG.warning(f'{dst["host"]}: mkdir -p {dst_path}')
+                        c.run(f'mkdir -p {dst_path}')
+                    elif event.is_file:
+                        c.put(event.src_path, dst_path)
+                else:
+                    if event.is_directory:
+                        # TODO: windows command
+                        pass
+                    elif event.is_file:
+                        c.put(event.src_path, dst_path)
+                        
     def on_moved(self, event):
-        super(SyncEventHandler, self).on_moved(event)
-        self.LOG.warning('Move: %s to %s, event: %s' % (
-            event.src_path, event.dest_path, event.__dict__))
+        super().on_moved(event)
+        self.LOG.warning(f'Move: {event.src_path} to {event.dest_path}')
+        if event.is_directory:
+            pass
 
     def on_modified(self, event):
-        super(SyncEventHandler, self).on_modified(event)
+        super().on_modified(event)
         if event.is_directory:
             return
-        self.LOG.warning('Modified: %s, event: %s' % (
-            event.src_path, event.__dict__))
+        self.LOG.warning(f'Modified: {event.src_path}')
 
     def on_deleted(self, event):
-        super(SyncEventHandler, self).on_deleted(event)
-        self.LOG.warning('Deleted: %s, event: %s' % (
-            event.src_path, event.__dict__))
+        super().on_deleted(event)
+        self.LOG.warning(f'Deleted: {event.src_path}')
 
 
