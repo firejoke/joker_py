@@ -2,7 +2,7 @@ import pathlib
 import platform
 import logging
 # now we patch Python code to add color support to logging.StreamHandler
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import WatchedFileHandler
 
 
 def add_coloring_to_emit_windows(fn):
@@ -114,7 +114,7 @@ DEBUG = logging.DEBUG
 LOG_FORMAT = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
 LOG_Name = pathlib.Path(__file__).parent.name
 LOG_Path = pathlib.Path(__file__).parent.joinpath(LOG_Name + '.log')
-FileH = TimedRotatingFileHandler(LOG_Path)
+FileH = WatchedFileHandler(LOG_Path)
 FileH.setLevel(logging.INFO)
 FileH.setFormatter(LOG_FORMAT)
 TerminalH = logging.StreamHandler()
