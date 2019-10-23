@@ -7,12 +7,16 @@ Sync:
       password: joker
       port: '22'
       path: /root/NGD_HKBANK_version/
-    patterns: null
-    ignore_patterns:
-      - ".idea/*"
-      - ".idea\\*"
-      - "py_.*"
+#   正则匹配
+    regexes:
+      - ".*"
+    ignore_regexes:
+      - ".*.tmp"
+      #  Windows
+      - ".*.idea\\\\"
+      - ".*.py_"
     ignore_directories: false
+    case_sensitive: true
   - source: E:\PycharmProjects\NGD_CEPH_version
     destinations:
       - host: 192.168.8.150
@@ -20,10 +24,12 @@ Sync:
         password: joker
         port: '22'
         path: /root/NGD_CEPH_version/
-    patterns: null
-    ignore_patterns:
-      - ".idea/*"
-      - ".idea\\*"
-      - "py_.*"
+    regexes:
+      - ".*"
+    ignore_regexes:
+      - ".*.idea\\\\"
+      - ".*.tmp"
+      - ".*.py_"
     ignore_directories: false
+    case_sensitive: true
 # - ......

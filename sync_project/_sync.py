@@ -4,7 +4,8 @@
 import re
 import socket
 
-from watchdog.events import PatternMatchingEventHandler
+from watchdog.events import RegexMatchingEventHandler
+from watchdog.utils import unicode_paths, has_attribute
 
 from util import ip_check, ConnectionException, get_dest_path
 
@@ -14,23 +15,26 @@ from paramiko.ssh_exception import (
     NoValidConnectionsError, AuthenticationException, )
 
 
-class SyncEventHandler(PatternMatchingEventHandler):
+class SyncEventHandler(RegexMatchingEventHandler):
     """Sync src to dst"""
 
-    def __init__(self, LOG, source, destinations, patterns=None,
-                 ignore_patterns=None, ignore_directories=False):
+    def __init__(self, LOG, source, destinations, regexes=None,
+                 ignore_regexes=[], ignore_directories=False,
+                 case_sensitive=True):
         """"""
+        if not regexes:
+            regexes = [r'.*']
+
         super().__init__(
-                patterns, ignore_patterns, ignore_directories,
-                case_sensitive=True)
+                regexes, ignore_regexes, ignore_directories, case_sensitive)
         if not isinstance(destinations, list):
             raise TypeError('dst must be list')
         for dst in destinations:
             if dst.keys() != {'host', 'port', 'user', 'password', 'path'}:
                 raise KeyError("host keys must be {'host', 'port', 'user', "
                                "'password', 'path'}")
-            if not ip_check(dst['ip']):
-                raise ConnectionException('ip error')
+            if not ip_check(dst['host']):
+                raise ConnectionException('host error')
             # 测试连接是否可用
             with Connection(host=dst['host'], port=dst['port'], user=dst['user'],
                             connect_kwargs={'password': dst['password']},
@@ -58,12 +62,15 @@ Sync:
       password: pwd
       port: '22'
       path: /root/NGD_HKBANK_version/
-    patterns: null
-    ignore_patterns:
+    # 正则匹配规则
+    regexes:
+      - .*
+    ignore_regexes:
       - ".idea/*"
       - ".idea\\\\*"
       - "py_.*"
     ignore_directories: false
+    case_sensitive: true
   - source: E:\\PycharmProjects\\NGD_CEPH_version
     destinations:
       - host: 192.168.8.150
@@ -71,28 +78,16 @@ Sync:
         password: joker
         port: '22'
         path: /root/NGD_CEPH_version/
-    patterns: null
-    ignore_patterns:
+    regexes:
+      - .*
+    ignore_regexes:
       - ".idea/*"
       - ".idea\\\\*"
-      - "py_.*"
+      - "py_"
     ignore_directories: false
+    case_sensitive: true
     """
         return template_yaml % context
-
-    def dispatch(self, event):
-        src_ignore = filter(lambda p: re.search(p, event.src_path),
-                            self.ignore_patterns)
-        if hasattr(event, "dest_path"):
-            dest_ignore = filter(lambda p: re.search(p, event.dest_path),
-                                 self.ignore_patterns)
-        else:
-            dest_ignore = []
-        ignore = [i for i in src_ignore] + [i for i in dest_ignore]
-        if ignore:
-            return
-        else:
-            super().dispatch(event)
 
     def on_any_event(self, event):
         """
@@ -110,19 +105,23 @@ Sync:
                             user=dst['user'],
                             connect_kwargs={'password': dst['password']},
                             connect_timeout=30) as c:
-                # unix command
-                if dst_path.startswith('/'):
-                    if event.is_directory:
-                        self.LOG.warning(f'{dst["host"]}: mkdir -p {dst_path}')
-                        c.run(f'mkdir -p {dst_path}')
-                    elif event.is_file:
-                        c.put(event.src_path, dst_path)
-                else:
-                    if event.is_directory:
-                        # TODO: windows command
-                        pass
-                    elif event.is_file:
-                        c.put(event.src_path, dst_path)
+                try:
+                    # unix command
+                    if dst_path.startswith('/'):
+                        if event.is_directory:
+                            self.LOG.warning(f'{dst["host"]}: mkdir -p {dst_path}')
+                            c.run(f'mkdir -p {dst_path}')
+                        else:
+                            self.LOG.warning(f'put {event.src_path} to {dst_path}')
+                            c.put(event.src_path, dst_path)
+                    else:
+                        if event.is_directory:
+                            # TODO: windows command
+                            pass
+                        else:
+                            c.put(event.src_path, dst_path)
+                except Exception as e:
+                    self.LOG.warning(e)
                         
     def on_moved(self, event):
         super().on_moved(event)
