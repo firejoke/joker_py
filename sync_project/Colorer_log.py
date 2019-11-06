@@ -122,9 +122,9 @@ TerminalH.setLevel(logging.INFO)
 TerminalH.setFormatter(LOG_FORMAT)
 
 
-LOG = logging.getLogger()
-LOG.addHandler(FileH)
-LOG.setLevel(logging.WARN)
+logger = logging.getLogger()
+logger.addHandler(FileH)
+logger.setLevel(logging.WARN)
 
 
 def set_log_handler(LOG, method, name):

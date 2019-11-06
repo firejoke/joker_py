@@ -2,48 +2,15 @@
 # Author      : ShiFan
 # Created Date: 2019/10/16 11:50
 import os
-import pathlib
-import sys
+from pathlib import Path
 
-import yaml
+from fabric import Connection
 
-from Colorer_log import LOG, INFO, WARN, ERROR, DEBUG, set_log_handler
+from conf import LOG
 
 
 class ConnectionException(Exception):
     """connection error """
-
-
-def load_conf():
-    try:
-        conf_path = pathlib.Path(__file__).parent.joinpath('sync_project.yaml')
-        with open(conf_path, 'r') as f:
-            conf = yaml.safe_load(f)
-        if isinstance(conf['Sync'], list):
-            if conf.get('LOG_Level') in ('info', 'INFO'):
-                LOG.setLevel(INFO)
-                LOG.info('LOG level change to info')
-            elif conf.get('LOG_Level') in ('warn', 'WARN',
-                                           'warning', 'WARNING'):
-                LOG.setLevel(WARN)
-                LOG.warning('LOG level change to warn')
-            elif conf.get('LOG_Level') in ('error', 'ERROR'):
-                LOG.setLevel(ERROR)
-            elif conf.get('LOG_Level') in ('debug', 'DEBUG'):
-                LOG.setLevel(DEBUG)
-                LOG.debug('LOG level change to debug')
-            elif conf.get('LOG_Level'):
-                LOG.error('LOG_Level value error')
-            return conf
-        else:
-            LOG.error('type error: Sync require list')
-            sys.exit(1)
-    except IOError:
-        LOG.error('not found config: ./sync_project.yaml')
-        sys.exit(1)
-    except yaml.YAMLError as e:
-        LOG.error("yaml syntax error: " + e.__str__())
-        sys.exit(1)
 
 
 def ip_check(ip_address):
@@ -77,7 +44,72 @@ def ip_check(ip_address):
             return True
 
 
+def generate_yaml():
+    yaml_path = Path(__file__).parent / 'sync_project.yaml'
+    template_yaml = """
+LOG_Level: WARN
+Sync:
+  - source: E:\\absolute_path\\root_directory
+    destinations:
+    - host: host ip
+      user: root
+      password: pwd
+      port: '22'
+      path: /dst_absolute_path/dst_root_directory/
+    # 正则匹配规则
+    regexes:
+      - .*
+    ignore_regexes:
+      - ".*.tmp"
+      - ".*.idea*"
+      - ".*.svn"
+      - ".*.py_.*"
+    ignore_directories: false
+    case_sensitive: true
+  - source: F:\\absolute_path\\root_directory
+    destinations:
+      - host: host ip
+        user: root
+        password: pwd
+        port: '22'
+        path: /dst_absolute_path/dst_root_directory/
+    regexes:
+      - .*
+    ignore_regexes:
+      - ".*.tmp"
+      - ".*.idea"
+      - ".*.svn"
+      - ".*.py_.*"
+    ignore_directories: false
+    case_sensitive: true
+    """
+    with open(yaml_path, 'w') as f:
+        f.write(template_yaml)
+    return yaml_path, template_yaml
+
+
+def put_one(base_src: str, src: str, base_dst: str, con: Connection):
+    base_src = Path(base_src).absolute().__str__()
+    src = Path(src).absolute().__str__()
+    if Path(src).is_file():
+        dst_path = get_dest_path(base_src, src, base_dst)
+        dst_parent = os.path.split(dst_path)[0]
+        if dst_path.startswith('/'):
+            con.run(f"mkdir -p {dst_parent}")
+        else:
+            # TODO: windows command
+            pass
+        con.put(src, dst_path)
+        LOG().warning(f'put {src} to {con.host}: {dst_path}')
+    elif Path(src).is_dir():
+        for p in Path(src).iterdir():
+            put_one(base_src, p.__str__(), base_dst, con)
+    return True
+
+
 def get_dest_path(root_path: str, absolute_path: str, dest_base_path: str):
+    if os.path.commonprefix([root_path, absolute_path]) != root_path:
+        raise ValueError(f'{absolute_path} 没有被包含在 {root_path} 的目录树内')
     relative_path = absolute_path[len(root_path):]
     if relative_path.startswith(('\\', '/')):
         relative_path = relative_path[1:]
@@ -91,5 +123,5 @@ def get_dest_path(root_path: str, absolute_path: str, dest_base_path: str):
         dest_path = os.path.join(dest_base_path, relative_path
                                  ).replace('/', '\\')
     else:
-        raise ValueError('不支持该路径格式: %s' % dest_base_path)
+        raise ValueError(f'不支持该路径格式: {dest_base_path}')
     return dest_path
