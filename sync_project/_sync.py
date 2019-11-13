@@ -14,7 +14,8 @@ from paramiko import SSHException
 from paramiko.ssh_exception import (
     NoValidConnectionsError, AuthenticationException, )
 
-from util import ip_check, ConnectionException, get_dest_path, put_one
+from util import (
+    ip_check, ConnectionException, get_dest_path, put_one, is_continue, )
 from conf import LOG
 
 
@@ -44,7 +45,7 @@ class SyncEventHandler(RegexMatchingEventHandler):
                             connect_timeout=30) as c:
                 try:
                     # 测试参数可用
-                    c.run('hostname', hide=True)
+                    c.run('hostname', hide=True, wran=True)
                     self.c = c
                 except (AuthenticationException, NoValidConnectionsError,
                         socket.timeout, SSHException, socket.error) as e:
@@ -59,19 +60,36 @@ class SyncEventHandler(RegexMatchingEventHandler):
 
         for dst in self.dests:
             if event.is_directory:
-                for b, d, f in os.walk(event.src_path):
-                    for fs in f:
-                        src_ = Path(b) / fs
-                        src_ = src_.__str__()
-                        put_one(self.src, src_, dst['path'], self.c)
+                if Path(event.src_path).stat().st_size == 0:
+                    dst_path = get_dest_path(self.src, event.src_path,
+                                             dst['path'])
+                    res = self.c.run(f'mkdir -p {dst_path}', hide=True,
+                                     warn=True)
+                    if res.stdout:
+                        self.log.info(res.stdout)
+                else:
+                    for b, d, f in os.walk(event.src_path):
+                        for fs in f:
+                            src_ = Path(b) / fs
+                            src_ = src_.__str__()
+                            put_one(self.src, src_, dst['path'], self.c)
             else:
                 put_one(self.src, event.src_path, dst['path'], self.c)
 
+    @is_continue
     def on_moved(self, event):
         super().on_moved(event)
         self.log.info(f'Move: {event.src_path} to {event.dest_path}')
-        if event.is_directory:
-            pass
+        for dst in self.dests:
+            dest_src_path = get_dest_path(self.src, event.src_path,
+                                          dst['path'])
+            dest_dst_path = get_dest_path(self.src, event.dest_path,
+                                          dst['path'])
+            if event.is_directory and Path(event.src_path).stat().st_size > 0:
+                self.log.warning(f'{event.src_path} not empty, size: '
+                                 f'{Path(event.src_path).stat().st_size}')
+            else:
+                self.c.run(f'mv {dest_src_path} {dest_dst_path}')
 
     def on_modified(self, event):
         super().on_modified(event)

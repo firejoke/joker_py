@@ -97,13 +97,14 @@ if __name__ == '__main__':
             # windows
             signal.signal(signal.SIGBREAK, exit_bos)
             try:
-                while filter(lambda ob: ob.is_alive(), observer_instances):
+                while any(ob.is_alive() for ob in observer_instances):
                     time.sleep(1)
                 for ob_instance in observer_instances:
                     ob_instance.stop()
                     ob_instance.join()
-            except Exception:
-                log.error('systemexit sync')
+            except Exception as e:
+                log.error(e)
+                log.error('system exit')
                 for ob_instance in observer_instances:
                     ob_instance.stop()
                     ob_instance.join()

@@ -92,7 +92,7 @@ Sync:
 
 def is_continue(method):
     """
-    当为debug模式时, 不捕获异常, 强制继续运行
+    当为normal模式时, 不捕获异常, 强制继续运行
     :return:
     """
     log = LOG()
@@ -103,8 +103,7 @@ def is_continue(method):
             return method(*args, **kwargs)
         except Exception as e:
             log.error(e)
-            if DebugMode():
-                raise e
+            assert not DebugMode(), e
     return wrapper
 
 
