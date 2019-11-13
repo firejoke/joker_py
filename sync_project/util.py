@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fabric import Connection
 
-from conf import LOG, DEBUG
+from conf import LOG, DebugMode
 
 
 class ConnectionException(Exception):
@@ -92,7 +92,7 @@ Sync:
 
 def is_continue(method):
     """
-    当为debug模式时, 不捕获异常
+    当为debug模式时, 不捕获异常, 强制继续运行
     :return:
     """
     log = LOG()
@@ -103,7 +103,7 @@ def is_continue(method):
             return method(*args, **kwargs)
         except Exception as e:
             log.error(e)
-            if log.level == DEBUG:
+            if DebugMode():
                 raise e
     return wrapper
 
@@ -113,24 +113,18 @@ def put_one(base_src: str, src: str, base_dst: str, con: Connection):
     log = LOG()
     base_src = Path(base_src).absolute().__str__()
     src = Path(src).absolute().__str__()
-    if Path(src).is_file():
-        dst_path = get_dest_path(base_src, src, base_dst)
-        dst_parent = os.path.split(dst_path)[0]
-        if dst_path.startswith('/'):
-            con.run(f"mkdir -p {dst_parent}")
-        else:
-            # TODO: windows command
-            pass
-        log.info(f'src: {src}')
-        log.info(f'pushing to {con.host}: {dst_path}')
-        con.put(src, dst_path, preserve_mode=False)
-        log.info(f'file size: {os.path.getsize(src) / 1024 / 1024}M')
-    # elif Path(src).is_dir():
-    #     for p in Path(src).iterdir():
-    #         put_one(base_src, p.__str__(), base_dst, con)
+    assert Path(src).is_file(), 'src file must be file'
+    dst_path = get_dest_path(base_src, src, base_dst)
+    dst_parent = os.path.split(dst_path)[0]
+    if dst_path.startswith('/'):
+        con.run(f"mkdir -p {dst_parent}")
     else:
-        return False
-    return True
+        # TODO: windows command
+        pass
+    log.info(f'src: {src}')
+    log.info(f'pushing to {con.host}: {dst_path}')
+    con.put(src, dst_path, preserve_mode=False)
+    log.info(f'file size: {os.path.getsize(src) / 1024 / 1024}M')
 
 
 def get_dest_path(root_path: str, absolute_path: str, dest_base_path: str):

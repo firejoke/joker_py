@@ -78,8 +78,10 @@ if __name__ == '__main__':
     if getattr(args, 'mode', None) in ('normal', 'debug'):
         log = LOG()
         if args.mode == 'debug':
+            load_conf(DebugMode=True, LogLevel='DEBUG')
             del log
-            load_conf(LOG_Level='debug')
+            del CONF
+            from conf import CONF
             log = LOG()
         if CONF.get('Sync'):
 
@@ -95,8 +97,11 @@ if __name__ == '__main__':
             # windows
             signal.signal(signal.SIGBREAK, exit_bos)
             try:
-                while 1:
+                while filter(lambda ob: ob.is_alive(), observer_instances):
                     time.sleep(1)
+                for ob_instance in observer_instances:
+                    ob_instance.stop()
+                    ob_instance.join()
             except Exception:
                 log.error('systemexit sync')
                 for ob_instance in observer_instances:

@@ -36,8 +36,7 @@ class SyncEventHandler(RegexMatchingEventHandler):
             if dst.keys() != {'host', 'port', 'user', 'password', 'path'}:
                 raise KeyError("host keys must be {'host', 'port', 'user', "
                                "'password', 'path'}")
-            if not ip_check(dst['host']):
-                raise ConnectionException('host error')
+            assert ip_check(dst['host']), 'host error'
             # 测试连接是否可用
             with Connection(host=dst['host'], port=dst['port'],
                             user=dst['user'],

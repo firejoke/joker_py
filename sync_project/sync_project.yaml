@@ -1,8 +1,9 @@
-LOG_Level: WARN
+DebugMode: false
+LogLevel: INFO
 Sync:
   - source: E:\PycharmProjects\setupRPM
     destinations:
-    - host: 192.168.8.150
+    - host: 192.168.50.52
       user: root
       password: joker
       port: '22'
@@ -19,13 +20,13 @@ Sync:
       - ".*.py_"
     ignore_directories: false
     case_sensitive: true
-  - source: E:\PycharmProjects\NGD_Kyin-debian_version
+  - source: E:\PycharmProjects\NGD_Kylin-debian_version
     destinations:
-      - host: 192.168.8.150
+      - host: 192.168.50.52
         user: root
         password: joker
         port: '22'
-        path: /root/NGD_Kyin-debian_version/
+        path: /root/NGD_Kylin-debian_version/
     regexes:
       - ".*"
     ignore_regexes:

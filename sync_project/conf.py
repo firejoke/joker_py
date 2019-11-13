@@ -12,6 +12,7 @@ from Colorer_log import logger, INFO, WARN, ERROR, DEBUG, TerminalH
 
 CONF = dict()
 LOG = lambda: logger
+DebugMode = lambda: CONF.get('DebugMode')
 
 
 def load_conf(**kwargs):
@@ -24,11 +25,9 @@ def load_conf(**kwargs):
         conf_path = Path(__file__).parent.joinpath('sync_project.yaml')
         with open(conf_path, 'r') as f:
             CONF = yaml.safe_load(f)
+        CONF.update(kwargs)
         if isinstance(CONF['Sync'], list):
-            if kwargs.get('LOG_Level'):
-                log_level = kwargs.get('LOG_Level')
-            else:
-                log_level = CONF.get('LOG_Level')
+            log_level = CONF.get('LogLevel')
             if log_level:
                 if log_level in ('info', 'INFO'):
                     logger.setLevel(INFO)
