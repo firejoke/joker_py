@@ -4,12 +4,12 @@
 """The Module Has Been Build for start sync server"""
 import argparse
 import atexit
+import os
 import re
 import signal
 import socket
 import sys
 import time
-import uuid
 from pathlib import Path
 
 from fabric import Connection
@@ -17,11 +17,14 @@ from paramiko import AuthenticationException
 from paramiko.ssh_exception import NoValidConnectionsError, SSHException
 from watchdog.observers import Observer
 
+from _sync import SyncEventHandler
 from conf import CONF, LOG, load_conf
+from util import generate_yaml, ConnectionException, put_one
 
 
+base_path = Path(__file__).parent
 parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description="一个基于watchdog和ssh的同步本地项目到远程服务器的工具",
         epilog="""
 e.g:\n
@@ -32,9 +35,9 @@ e.g:\n
         ./virtenv/bin/python manager.py --conf_gen\n
 手动推送到远程主机:\n
     Windows:\n
-        .\\virtenv\\Scripts\\python manager.py --put\n
+        .\\virtenv\\Scripts\\python manager.py --push\n
     unix:\n
-        ./virtenv/bin/python manager.py --put\n
+        ./virtenv/bin/python manager.py --push\n
 debug模式:\n
     Windows:\n
         .\\virtenv\\Scripts\\python manager.py --debug\n
@@ -47,11 +50,17 @@ start:\n
         ./virtenv/bin/python manager.py --start\n
         """
 )
-parser.add_argument('--conf_gen', default=0,
-                    help='生成sync_project.yaml配置模板文件')
-parser.add_argument('--put', default=0, help='')
-parser.add_argument('--debug', default=0, help='debug mode')
-parser.add_argument('--start', default=0, help='start run')
+subcmd = parser.add_subparsers(title='subcmd')
+run_mode = subcmd.add_parser('run', help='run mode, default: normal')
+run_mode.add_argument('mode', nargs='?', default='normal',
+                      help='run mode: normal or debug')
+util_cmd = subcmd.add_parser('util', help='push project or generate conf file')
+util_cmd.add_argument('--push', action='store_true',
+                      help='push once project')
+conf_def_path = (base_path / 'sync_object.yaml').absolute()
+util_cmd.add_argument('--conf_gen', action='store_const', const=conf_def_path,
+                      help=f'Generate the configuration template file, '
+                           f'default path: {conf_def_path}')
 args = parser.parse_args()
 
 observer_instances = []
@@ -66,11 +75,13 @@ def exit_bos(signum=None, frame=None):
 
 
 if __name__ == '__main__':
-    if args.debug or args.start:
-        if args.debug:
+    if getattr(args, 'mode', None) in ('normal', 'debug'):
+        log = LOG()
+        if args.mode == 'debug':
+            del log
             load_conf(LOG_Level='debug')
+            log = LOG()
         if CONF.get('Sync'):
-            from _sync import SyncEventHandler
 
             for sd_instance in CONF['Sync']:
                 observer = Observer()
@@ -87,14 +98,13 @@ if __name__ == '__main__':
                 while 1:
                     time.sleep(1)
             except Exception:
-                LOG().warning('systemexit sync')
+                log.error('systemexit sync')
                 for ob_instance in observer_instances:
                     ob_instance.stop()
                     ob_instance.join()
         else:
-            LOG().warning('conf not found Sync')
-    elif args.put:
-        from util import ConnectionException, put_one
+            log.error('conf not found Sync')
+    elif getattr(args, 'push', False):
 
         for sd_instance in CONF['Sync']:
             src = sd_instance['source']
@@ -109,19 +119,25 @@ if __name__ == '__main__':
                     try:
                         c.run('hostname', hide=True)
                         for p in Path(src).iterdir():
-                            p = p.absolute().__str__()
-                            if any(re.match(r, p) for r in ignore_regexes):
+                            ps = p.absolute().__str__()
+                            if any(re.match(r, ps) for r in ignore_regexes):
                                 continue
                             else:
-                                put_one(src, p, dst['path'], c)
+                                if p.is_file():
+                                    put_one(src, ps, dst['path'], c)
+                                elif p.is_dir():
+                                    for b, d, f in os.walk(ps):
+                                        for fs in f:
+                                            src_ = Path(b) / fs
+                                            src_ = src_.__str__()
+                                            put_one(src, src_, dst['path'], c)
                     except (AuthenticationException, NoValidConnectionsError,
                             socket.timeout, SSHException, socket.error) as e:
+                        LOG().error(e)
                         raise ConnectionException(e)
-    elif args.conf_gen:
-        from util import generate_yaml
-
-        yaml_path, template_yaml = generate_yaml()
-        LOG().info(f'模板配置文件路径:\n{yaml_path}\n'
-                   f'模板配置文件内容:\n{template_yaml}')
+    elif getattr(args, 'conf_gen', None):
+        yaml_path, template_yaml = generate_yaml(args.conf_gen)
+        LOG().info(f'配置模板文件路径:  {yaml_path}\n'
+                   f'配置模板文件内容:\n{template_yaml}')
     else:
         parser.print_help()

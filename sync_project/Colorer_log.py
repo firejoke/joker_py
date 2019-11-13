@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pathlib
 import platform
 import logging
@@ -111,7 +112,7 @@ INFO = logging.INFO
 WARN = logging.WARN
 ERROR = logging.ERROR
 DEBUG = logging.DEBUG
-LOG_FORMAT = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
+LOG_FORMAT = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 LOG_Name = pathlib.Path(__file__).parent.name
 LOG_Path = pathlib.Path(__file__).parent.joinpath(LOG_Name + '.log')
 FileH = WatchedFileHandler(LOG_Path)
@@ -124,7 +125,7 @@ TerminalH.setFormatter(LOG_FORMAT)
 
 logger = logging.getLogger()
 logger.addHandler(FileH)
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.INFO)
 
 
 def set_log_handler(LOG, method, name):

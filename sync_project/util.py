@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # Author      : ShiFan
 # Created Date: 2019/10/16 11:50
+import functools
 import os
 from pathlib import Path
 
 from fabric import Connection
 
-from conf import LOG
+from conf import LOG, DEBUG
 
 
 class ConnectionException(Exception):
@@ -44,8 +45,9 @@ def ip_check(ip_address):
             return True
 
 
-def generate_yaml():
-    yaml_path = Path(__file__).parent / 'sync_project.yaml'
+def generate_yaml(yaml_path=None):
+    if not yaml_path:
+        yaml_path = Path(__file__).parent / 'sync_project.yaml'
     template_yaml = """
 LOG_Level: WARN
 Sync:
@@ -88,7 +90,27 @@ Sync:
     return yaml_path, template_yaml
 
 
+def is_continue(method):
+    """
+    当为debug模式时, 不捕获异常
+    :return:
+    """
+    log = LOG()
+
+    @functools.wraps(method)
+    def wrapper(*args, **kwargs):
+        try:
+            return method(*args, **kwargs)
+        except Exception as e:
+            log.error(e)
+            if log.level == DEBUG:
+                raise e
+    return wrapper
+
+
+@is_continue
 def put_one(base_src: str, src: str, base_dst: str, con: Connection):
+    log = LOG()
     base_src = Path(base_src).absolute().__str__()
     src = Path(src).absolute().__str__()
     if Path(src).is_file():
@@ -99,11 +121,15 @@ def put_one(base_src: str, src: str, base_dst: str, con: Connection):
         else:
             # TODO: windows command
             pass
-        con.put(src, dst_path)
-        LOG().warning(f'put {src} to {con.host}: {dst_path}')
-    elif Path(src).is_dir():
-        for p in Path(src).iterdir():
-            put_one(base_src, p.__str__(), base_dst, con)
+        log.info(f'src: {src}')
+        log.info(f'pushing to {con.host}: {dst_path}')
+        con.put(src, dst_path, preserve_mode=False)
+        log.info(f'file size: {os.path.getsize(src) / 1024 / 1024}M')
+    # elif Path(src).is_dir():
+    #     for p in Path(src).iterdir():
+    #         put_one(base_src, p.__str__(), base_dst, con)
+    else:
+        return False
     return True
 
 
@@ -125,3 +151,5 @@ def get_dest_path(root_path: str, absolute_path: str, dest_base_path: str):
     else:
         raise ValueError(f'不支持该路径格式: {dest_base_path}')
     return dest_path
+
+

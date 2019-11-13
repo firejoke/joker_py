@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from Colorer_log import logger, INFO, WARN, ERROR, DEBUG, set_log_handler
+from Colorer_log import logger, INFO, WARN, ERROR, DEBUG, TerminalH
 
 
 CONF = dict()
@@ -25,23 +25,23 @@ def load_conf(**kwargs):
         with open(conf_path, 'r') as f:
             CONF = yaml.safe_load(f)
         if isinstance(CONF['Sync'], list):
-            if kwargs.get('logger_Level'):
-                log_level = kwargs.get('logger_Level')
+            if kwargs.get('LOG_Level'):
+                log_level = kwargs.get('LOG_Level')
             else:
-                log_level = CONF.get('logger_Level')
+                log_level = CONF.get('LOG_Level')
             if log_level:
                 if log_level in ('info', 'INFO'):
                     logger.setLevel(INFO)
-                    logger.info('logger level change to info')
+                    logger.info('logger level: info')
                 elif log_level in ('warn', 'WARN', 'warning', 'WARNING'):
                     logger.setLevel(WARN)
-                    logger.warning('logger level change to warn')
+                    logger.warning('logger level: warn')
                 elif log_level in ('error', 'ERROR'):
                     logger.setLevel(ERROR)
                 elif log_level in ('debug', 'DEBUG'):
-                    logger = set_log_handler(logger, 'a', 't')
+                    logger.addHandler(TerminalH)
                     logger.setLevel(DEBUG)
-                    logger.debug('logger level change to debug')
+                    logger.debug('logger level: debug')
                 elif log_level:
                     logger.error('logger_Level value error')
         else:
