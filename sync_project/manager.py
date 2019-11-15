@@ -25,36 +25,39 @@ from util import generate_yaml, ConnectionException, put_one
 base_path = Path(__file__).parent
 parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="一个基于watchdog和ssh的同步本地项目到远程服务器的工具",
+        description="一个基于watchdog和ssh的同步本地项目到远程linux服务器的工具",
         epilog="""
 e.g:\n
 生成配置文件模板:\n
     Windows:\n
-        .\\virtenv\\Scripts\\python manager.py --conf_gen\n
+        .\\virtenv\\Scripts\\python.exe manager.py util --conf_gen\n
     unix:\n
-        ./virtenv/bin/python manager.py --conf_gen\n
-手动推送到远程主机:\n
+        ./virtenv/bin/python manager.py util --conf_gen\n
+推送一次项目到远程主机:\n
     Windows:\n
-        .\\virtenv\\Scripts\\python manager.py --push\n
+        .\\virtenv\\Scripts\\python.exe manager.py util --push\n
     unix:\n
-        ./virtenv/bin/python manager.py --push\n
-debug模式:\n
+        ./virtenv/bin/python manager.py util --push\n
+debug运行模式:
+记录日志到日志文件时, 也会在当前命令行显示日志, 同时会抛出所有异常:\n
     Windows:\n
-        .\\virtenv\\Scripts\\python manager.py --debug\n
+        .\\virtenv\\Scripts\\python.exe manager.py run --debug\n
     unix:\n
-        ./virtenv/bin/python manager.py --debug\n
-start:\n
+        ./virtenv/bin/python manager.py run --debug\n
+normal运行模式:\n
+不会在当前命令行显示日志, 而且会捕获所有异常, 以便服务继续运行
     Windows:\n
-        .\\virtenv\\Scripts\\python manager.py --start\n
+        .\\virtenv\\Scripts\\pythonw.exe manager.py run\n
     unix:\n
-        ./virtenv/bin/python manager.py --start\n
+        ./virtenv/bin/python manager.py run\n
         """
 )
 subcmd = parser.add_subparsers(title='subcmd')
 run_mode = subcmd.add_parser('run', help='run mode, default: normal')
 run_mode.add_argument('mode', nargs='?', default='normal',
                       help='run mode: normal or debug')
-util_cmd = subcmd.add_parser('util', help='push project or generate conf file')
+util_cmd = subcmd.add_parser('util',
+                             help='push once project or generate conf file')
 util_cmd.add_argument('--push', action='store_true',
                       help='push once project')
 conf_def_path = (base_path / 'sync_object.yaml').absolute()
@@ -67,7 +70,7 @@ observer_instances = []
 
 
 def exit_bos(signum=None, frame=None):
-    LOG().error('sync server exit')
+    LOG().error(f'signum:{signum}, frame:{frame}')
     for ob_instance in observer_instances:
         ob_instance.stop()
         ob_instance.join()
@@ -102,6 +105,7 @@ if __name__ == '__main__':
                 for ob_instance in observer_instances:
                     ob_instance.stop()
                     ob_instance.join()
+                log.error('sync exit')
             except Exception as e:
                 log.error(e)
                 log.error('system exit')

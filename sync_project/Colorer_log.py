@@ -112,15 +112,18 @@ INFO = logging.INFO
 WARN = logging.WARN
 ERROR = logging.ERROR
 DEBUG = logging.DEBUG
-LOG_FORMAT = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 LOG_Name = pathlib.Path(__file__).parent.name
 LOG_Path = pathlib.Path(__file__).parent.joinpath(LOG_Name + '.log')
 FileH = WatchedFileHandler(LOG_Path)
+LOG_FORMAT = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
 FileH.setLevel(logging.INFO)
 FileH.setFormatter(LOG_FORMAT)
 TerminalH = logging.StreamHandler()
-TerminalH.setLevel(logging.INFO)
-TerminalH.setFormatter(LOG_FORMAT)
+DEBUG_FORMAT = logging.Formatter(
+        "%(asctime)s %(levelname)s  %(processName)s[%(threadName)s]  "
+        "%(pathname)s[%(funcName)s:%(lineno)d] %(message)s")
+TerminalH.setLevel(logging.DEBUG)
+TerminalH.setFormatter(DEBUG_FORMAT)
 
 
 logger = logging.getLogger()
