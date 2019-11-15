@@ -102,6 +102,7 @@ def is_continue(method):
         try:
             return method(*args, **kwargs)
         except Exception as e:
+            log.warning(method.__str__())
             log.error(e)
             assert not DebugMode(), e
     return wrapper
