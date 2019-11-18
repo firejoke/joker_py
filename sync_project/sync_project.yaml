@@ -1,13 +1,13 @@
 DebugMode: false
 LogLevel: INFO
 Sync:
-  - source: E:\PycharmProjects\setupRPM
+  - source: E:\PycharmProjects\NGD_Kylin-RedHat_version
     destinations:
     - host: 192.168.50.52
       user: root
       password: joker
       port: '22'
-      path: /root/setupRPM/
+      path: /root/NGD_KyLinCEPH_version/
 #   正则匹配
     regexes:
       - ".*"
@@ -20,17 +20,36 @@ Sync:
       - ".*.py_"
     ignore_directories: false
     case_sensitive: true
-  - source: E:\PycharmProjects\NGD_Kylin-debian_version
+  - source: E:\PycharmProjects\NGD_CEPH_version
     destinations:
       - host: 192.168.50.52
         user: root
         password: joker
         port: '22'
-        path: /root/NGD_Kylin-debian_version/
+        path: /root/NGD_CEPH_version/
     regexes:
       - ".*"
     ignore_regexes:
       - ".*.idea"
+      - ".*.svn"
+      - ".*.tmp"
+      - ".*.py_"
+    ignore_directories: false
+    case_sensitive: true
+  - source: E:\PycharmProjects\setupUI
+    destinations:
+      - host: 192.168.50.52
+        user: root
+        password: joker
+        port: '22'
+        path: /root/NGD_KyLin_AK_version/
+    regexes:
+      - ".*"
+    ignore_regexes:
+      - ".*.idea"
+      - ".*requires"
+      - ".*offline_requirements.py"
+      - ".*deployment_vestack.py"
       - ".*.svn"
       - ".*.tmp"
       - ".*.py_"

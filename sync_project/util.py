@@ -124,7 +124,9 @@ def put_one(base_src: str, src: str, base_dst: str, con: Connection):
     log.info(f'src: {src}')
     log.info(f'pushing to {con.host}: {dst_path}')
     con.put(src, dst_path, preserve_mode=False)
-    log.info(f'file size: {os.path.getsize(src) / 1024 / 1024}M')
+    file_size = os.path.getsize(src)
+    log.info(f'file size: {file_size / 1024 / 1024}M')
+    return file_size
 
 
 def get_dest_path(root_path: str, absolute_path: str, dest_base_path: str):

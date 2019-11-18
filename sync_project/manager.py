@@ -115,7 +115,11 @@ if __name__ == '__main__':
         else:
             log.error('conf not found Sync')
     elif getattr(args, 'push', False):
+        load_conf(LogOut='terminal')
+        del CONF
+        from conf import CONF
 
+        log = LOG()
         for sd_instance in CONF['Sync']:
             src = sd_instance['source']
             regexes = sd_instance['regexes']
@@ -141,6 +145,8 @@ if __name__ == '__main__':
                                             src_ = Path(b) / fs
                                             src_ = src_.__str__()
                                             put_one(src, src_, dst['path'], c)
+                        LOG().info(f'push once {src} to '
+                                   f'{dst["host"]}: {dst["path"]}')
                     except (AuthenticationException, NoValidConnectionsError,
                             socket.timeout, SSHException, socket.error) as e:
                         LOG().error(e)

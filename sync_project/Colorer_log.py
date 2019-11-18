@@ -123,7 +123,7 @@ DEBUG_FORMAT = logging.Formatter(
         "%(asctime)s %(levelname)s  %(processName)s[%(threadName)s]  "
         "%(pathname)s[%(funcName)s:%(lineno)d] %(message)s")
 TerminalH.setLevel(logging.DEBUG)
-TerminalH.setFormatter(DEBUG_FORMAT)
+TerminalH.setFormatter(LOG_FORMAT)
 
 
 logger = logging.getLogger()
