@@ -15,6 +15,7 @@ Sync:
     ignore_regexes:
       #  Windows
       - ".*.idea"
+      - ".*\\.tmp"
       - ".*.svn"
       - ".*.py_"
     ignore_directories: false
@@ -30,6 +31,7 @@ Sync:
       - ".*"
     ignore_regexes:
       - ".*.idea"
+      - ".*\\.tmp"
       - ".*.svn"
       - ".*.py_"
     ignore_directories: false
@@ -45,6 +47,7 @@ Sync:
       - ".*"
     ignore_regexes:
       - ".*.idea"
+      - ".*\\.tmp"
       - ".*requires"
       - ".*offline_requirements.py"
       - ".*deployment_vestack.py"
