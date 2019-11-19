@@ -120,6 +120,7 @@ if __name__ == '__main__':
         from conf import CONF
 
         log = LOG()
+        time_list = {}
         for sd_instance in CONF['Sync']:
             src = sd_instance['source']
             regexes = sd_instance['regexes']
@@ -132,25 +133,37 @@ if __name__ == '__main__':
                                 connect_timeout=30) as c:
                     try:
                         c.run('hostname', hide=True)
+                        start_time = time.time()
+                        now_size = 0
+                        full_size = Path(src).stat().st_size
                         for p in Path(src).iterdir():
                             ps = p.absolute().__str__()
                             if any(re.match(r, ps) for r in ignore_regexes):
                                 continue
                             else:
                                 if p.is_file():
-                                    put_one(src, ps, dst['path'], c)
+                                    size = put_one(src, ps, dst['path'], c)
+                                    now_size += size
+                                    log.info(f'{dst["path"]}:progress======>>'
+                                             f'{now_size / full_size * 100}%')
                                 elif p.is_dir():
                                     for b, d, f in os.walk(ps):
                                         for fs in f:
                                             src_ = Path(b) / fs
                                             src_ = src_.__str__()
-                                            put_one(src, src_, dst['path'], c)
-                        LOG().info(f'push once {src} to '
-                                   f'{dst["host"]}: {dst["path"]}')
+                                            size = put_one(src, src_,
+                                                           dst['path'], c)
+                                            now_size += size
+                                            log.info(f'{dst["path"]}:'
+                                                     f'progress======>>'
+                                                     f'{now_size / full_size * 100}%')
+                        time_list[dst['path']] = time.time() - start_time
                     except (AuthenticationException, NoValidConnectionsError,
                             socket.timeout, SSHException, socket.error) as e:
                         LOG().error(e)
                         raise ConnectionException(e)
+        if time_list:
+            log.info(f'elapsed time:\n{time_list}')
     elif getattr(args, 'conf_gen', None):
         yaml_path, template_yaml = generate_yaml(args.conf_gen)
         LOG().info(f'配置模板文件路径:  {yaml_path}\n'

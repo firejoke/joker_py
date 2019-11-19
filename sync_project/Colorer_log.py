@@ -122,7 +122,7 @@ TerminalH = logging.StreamHandler()
 DEBUG_FORMAT = logging.Formatter(
         "%(asctime)s %(levelname)s  %(processName)s[%(threadName)s]  "
         "%(pathname)s[%(funcName)s:%(lineno)d] %(message)s")
-TerminalH.setLevel(logging.DEBUG)
+TerminalH.setLevel(logging.INFO)
 TerminalH.setFormatter(LOG_FORMAT)
 
 

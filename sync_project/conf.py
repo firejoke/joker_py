@@ -48,12 +48,12 @@ def load_conf(**kwargs):
                 elif log_level:
                     logger.error('logger_Level value error')
             if CONF.get('LogOut') == 'file':
-                for h in logger.handlers:
-                    logger.removeHandler(h)
+                if TerminalH in logger.handlers:
+                    logger.removeHandler(TerminalH)
                 logger.addHandler(FileH)
             if CONF.get('LogOut') == 'terminal':
-                for h in logger.handlers:
-                    logger.removeHandler(h)
+                if FileH in logger.handlers:
+                    logger.removeHandler(FileH)
                 logger.addHandler(TerminalH)
         else:
             logger.error('type error: Sync require list')
