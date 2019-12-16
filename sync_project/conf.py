@@ -27,7 +27,8 @@ def load_conf(**kwargs):
         with open(conf_path, 'r') as f:
             CONF = yaml.safe_load(f)
         CONF.update(kwargs)
-        logger.warning(f'CONF:\n{CONF}')
+        conf_info = yaml.dump(CONF)
+        logger.warning(f'CONF:\n{conf_info}')
         if isinstance(CONF['Sync'], list):
             log_level = CONF.get('LogLevel')
             if log_level:

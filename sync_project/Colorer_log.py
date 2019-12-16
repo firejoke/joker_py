@@ -103,10 +103,18 @@ if platform.system() == 'Windows':
     # the console color
     logging.StreamHandler.emit = add_coloring_to_emit_windows(
         logging.StreamHandler.emit)
+    logging.FileHandler.emit = add_coloring_to_emit_windows(
+            logging.FileHandler.emit)
+    WatchedFileHandler.emit = add_coloring_to_emit_windows(
+            WatchedFileHandler.emit)
 else:
     # all non-Windows platforms are supporting ANSI escapes so we use them
     logging.StreamHandler.emit = add_coloring_to_emit_ansi(
         logging.StreamHandler.emit)
+    logging.FileHandler.emit = add_coloring_to_emit_ansi(
+            logging.FileHandler.emit)
+    WatchedFileHandler.emit = add_coloring_to_emit_ansi(
+            WatchedFileHandler.emit)
 
 INFO = logging.INFO
 WARN = logging.WARN
