@@ -3,7 +3,7 @@ import pathlib
 import platform
 import logging
 # now we patch Python code to add color support to logging.StreamHandler
-from logging.handlers import WatchedFileHandler
+from logging.handlers import TimedRotatingFileHandler
 
 
 def add_coloring_to_emit_windows(fn):
@@ -105,16 +105,16 @@ if platform.system() == 'Windows':
         logging.StreamHandler.emit)
     logging.FileHandler.emit = add_coloring_to_emit_windows(
             logging.FileHandler.emit)
-    WatchedFileHandler.emit = add_coloring_to_emit_windows(
-            WatchedFileHandler.emit)
+    TimedRotatingFileHandler.emit = add_coloring_to_emit_windows(
+            TimedRotatingFileHandler.emit)
 else:
     # all non-Windows platforms are supporting ANSI escapes so we use them
     logging.StreamHandler.emit = add_coloring_to_emit_ansi(
         logging.StreamHandler.emit)
     logging.FileHandler.emit = add_coloring_to_emit_ansi(
             logging.FileHandler.emit)
-    WatchedFileHandler.emit = add_coloring_to_emit_ansi(
-            WatchedFileHandler.emit)
+    TimedRotatingFileHandler.emit = add_coloring_to_emit_ansi(
+            TimedRotatingFileHandler.emit)
 
 INFO = logging.INFO
 WARN = logging.WARN
@@ -122,7 +122,7 @@ ERROR = logging.ERROR
 DEBUG = logging.DEBUG
 LOG_Name = pathlib.Path(__file__).parent.name
 LOG_Path = pathlib.Path(__file__).parent.joinpath(LOG_Name + '.log')
-FileH = WatchedFileHandler(LOG_Path)
+FileH = TimedRotatingFileHandler(LOG_Path, when='W0', backupCount=12)
 LOG_FORMAT = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
 FileH.setLevel(logging.INFO)
 FileH.setFormatter(LOG_FORMAT)

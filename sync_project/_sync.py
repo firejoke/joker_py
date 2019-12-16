@@ -46,9 +46,9 @@ class SyncEventHandler(RegexMatchingEventHandler):
                 c = self._create_connection(dst)
                 c.path = dst['path']
                 self.remote.append(c)
-            self.local.append(dst)
+            else:
+                self.local.append(dst)
         self.src = source
-        self.dests = destinations
 
     def _create_connection(self, dst):
         assert ip_check(dst['host']), 'host error'
