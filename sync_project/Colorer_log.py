@@ -1,9 +1,42 @@
 # -*- coding: utf-8 -*-
 import pathlib
 import platform
-import logging
-# now we patch Python code to add color support to logging.StreamHandler
+from logging import (StreamHandler, FileHandler, Formatter, getLogger, INFO,
+                     WARN, ERROR, DEBUG)
 from logging.handlers import TimedRotatingFileHandler
+# now we patch Python code to add color support to logging.StreamHandler
+import sys
+
+
+PYV = sys.version_info[0]
+if PYV == 3:
+    code_type = str
+elif PYV == 2:
+    code_type = unicode
+
+
+class ColorMixin(object):
+
+    def _set_color(self, code):
+        pass
+
+
+class ColorStreamHandler(ColorMixin, StreamHandler):
+    """
+    color stream handler base
+    """
+
+
+class ColorFileHandler(ColorMixin, FileHandler):
+    """
+    color file handler base
+    """
+
+
+class ColorTimedRotatingFileHandler(ColorMixin, TimedRotatingFileHandler):
+    """
+    color timed rotating file handler base
+    """
 
 
 def add_coloring_to_emit_windows(fn):
@@ -20,7 +53,7 @@ def add_coloring_to_emit_windows(fn):
         hdl = ctypes.windll.kernel32.GetStdHandle(self.STD_OUTPUT_HANDLE)
         ctypes.windll.kernel32.SetConsoleTextAttribute(hdl, code)
 
-    setattr(logging.StreamHandler, '_set_color', _set_color)
+    setattr(ColorStreamHandler, '_set_color', _set_color)
 
     def new(*args):
         FOREGROUND_BLUE = 0x0001  # text color contains blue.
@@ -92,7 +125,8 @@ def add_coloring_to_emit_ansi(fn):
             color = '\x1b[35m'  # pink
         else:
             color = '\x1b[0m'  # normal
-        args[1].msg = color + args[1].msg + '\x1b[0m'  # normal
+        if args[1].msg:
+            args[1].msg = color + args[1].msg.getMessage() + '\x1b[0m'  # normal
         # print "after"
         return fn(*args)
     return new
@@ -101,42 +135,38 @@ def add_coloring_to_emit_ansi(fn):
 if platform.system() == 'Windows':
     # Windows does not support ANSI escapes and we are using API calls to set
     # the console color
-    logging.StreamHandler.emit = add_coloring_to_emit_windows(
-        logging.StreamHandler.emit)
-    logging.FileHandler.emit = add_coloring_to_emit_windows(
-            logging.FileHandler.emit)
-    TimedRotatingFileHandler.emit = add_coloring_to_emit_windows(
-            TimedRotatingFileHandler.emit)
+    ColorStreamHandler.emit = add_coloring_to_emit_windows(
+        ColorStreamHandler.emit)
+    ColorFileHandler.emit = add_coloring_to_emit_windows(
+            ColorFileHandler.emit)
+    ColorTimedRotatingFileHandler.emit = add_coloring_to_emit_windows(
+            ColorTimedRotatingFileHandler.emit)
 else:
     # all non-Windows platforms are supporting ANSI escapes so we use them
-    logging.StreamHandler.emit = add_coloring_to_emit_ansi(
-        logging.StreamHandler.emit)
-    logging.FileHandler.emit = add_coloring_to_emit_ansi(
-            logging.FileHandler.emit)
-    TimedRotatingFileHandler.emit = add_coloring_to_emit_ansi(
-            TimedRotatingFileHandler.emit)
+    ColorStreamHandler.emit = add_coloring_to_emit_ansi(
+        ColorStreamHandler.emit)
+    ColorFileHandler.emit = add_coloring_to_emit_ansi(
+            ColorFileHandler.emit)
+    ColorTimedRotatingFileHandler.emit = add_coloring_to_emit_ansi(
+            ColorTimedRotatingFileHandler.emit)
 
-INFO = logging.INFO
-WARN = logging.WARN
-ERROR = logging.ERROR
-DEBUG = logging.DEBUG
 LOG_Name = pathlib.Path(__file__).parent.name
 LOG_Path = pathlib.Path(__file__).parent.joinpath(LOG_Name + '.log')
-FileH = TimedRotatingFileHandler(LOG_Path, when='W0', backupCount=12)
-LOG_FORMAT = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-FileH.setLevel(logging.INFO)
+FileH = ColorTimedRotatingFileHandler(LOG_Path, when='W0', backupCount=12)
+LOG_FORMAT = Formatter("%(asctime)s %(levelname)s %(message)s")
+FileH.setLevel(INFO)
 FileH.setFormatter(LOG_FORMAT)
-TerminalH = logging.StreamHandler()
-DEBUG_FORMAT = logging.Formatter(
+TerminalH = ColorStreamHandler()
+DEBUG_FORMAT = Formatter(
         "%(asctime)s %(levelname)s  %(processName)s[%(threadName)s]  "
         "%(pathname)s[%(funcName)s:%(lineno)d] %(message)s")
-TerminalH.setLevel(logging.INFO)
+TerminalH.setLevel(INFO)
 TerminalH.setFormatter(LOG_FORMAT)
 
 
-logger = logging.getLogger()
+logger = getLogger()
 logger.addHandler(FileH)
-logger.setLevel(logging.INFO)
+logger.setLevel(INFO)
 
 
 def set_log_handler(LOG, method, name):
@@ -163,3 +193,26 @@ def set_log_handler(LOG, method, name):
         else:
             LOG.error('alter method error, must be a or d')
     return LOG
+
+"""
+e.g.
+from Colorer_log import logger
+
+logger.info("xxx")
+logger.error("xxx")
+
+
+2020-01-06 15:26:47,756 INFO xxx
+=====================================
+debug
+
+from Colorer_log import logger, DEBUG_FORMAT, FileH
+
+FileH.setFormatter(DEBUG_FORMAT)
+
+logger.debug("xxx")
+logger.info("xxx")
+
+
+2020-01-06 15:37:42,355 DEBUG  MainProcess[Thread-15]  dirname/file_name.py[method_name:125] xxx
+"""

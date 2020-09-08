@@ -41,9 +41,9 @@ e.g:\n
 debug运行模式:
 记录日志到日志文件时, 也会在当前命令行显示日志, 同时会抛出所有异常:\n
     Windows:\n
-        .\\virtenv\\Scripts\\python.exe manager.py run --debug\n
+        .\\virtenv\\Scripts\\python.exe manager.py run debug\n
     unix:\n
-        ./virtenv/bin/python manager.py run --debug\n
+        ./virtenv/bin/python manager.py run debug\n
 normal运行模式:\n
 不会在当前命令行显示日志, 而且会捕获所有异常, 以便服务继续运行
     Windows:\n
