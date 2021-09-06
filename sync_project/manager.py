@@ -18,14 +18,14 @@ from paramiko.ssh_exception import NoValidConnectionsError, SSHException
 from watchdog.observers import Observer
 
 from _sync import SyncEventHandler
-from conf import CONF, LOG, load_conf
+from conf import CONF, logger, load_conf
 from util import generate_yaml, ConnectionException, put_one
 
 
 base_path = Path(__file__).parent
 parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="一个基于watchdog和ssh的同步本地项目到远程linux服务器的工具",
+        description="一个基于watchdog和ssh的同步本地项目到远程linux服务器的python脚本，python>=3.6.8",
         epilog="""
 e.g:\n
 生成配置文件模板:\n
@@ -69,8 +69,8 @@ args = parser.parse_args()
 observer_instances = []
 
 
-def exit_bos(signum=None, frame=None):
-    LOG().error(f'signum:{signum}, frame:{frame}')
+def ending(signum=None, frame=None):
+    logger.warning(f'signum:{signum}, frame:{frame}')
     for ob_instance in observer_instances:
         ob_instance.stop()
         ob_instance.join()
@@ -79,13 +79,8 @@ def exit_bos(signum=None, frame=None):
 
 if __name__ == '__main__':
     if getattr(args, 'mode', None) in ('normal', 'debug'):
-        log = LOG()
         if args.mode == 'debug':
             load_conf(DebugMode=True, LogLevel='DEBUG')
-            del log
-            del CONF
-            from conf import CONF
-            log = LOG()
         if CONF.get('Sync'):
 
             for sd_instance in CONF['Sync']:
@@ -94,32 +89,28 @@ if __name__ == '__main__':
                                   sd_instance['source'], recursive=True)
                 observer.start()
                 observer_instances.append(observer)
-            atexit.register(exit_bos)
-            signal.signal(signal.SIGINT, exit_bos)
-            signal.signal(signal.SIGTERM, exit_bos)
+            atexit.register(ending)
+            signal.signal(signal.SIGINT, ending)
+            signal.signal(signal.SIGTERM, ending)
             # windows
-            signal.signal(signal.SIGBREAK, exit_bos)
+            signal.signal(signal.SIGBREAK, ending)
             try:
                 while any(ob.is_alive() for ob in observer_instances):
                     time.sleep(1)
                 for ob_instance in observer_instances:
                     ob_instance.stop()
                     ob_instance.join()
-                log.error('sync exit')
+                logger.error('All processes exit')
             except Exception as e:
-                log.error(e)
-                log.error('system exit')
+                logger.error(e)
                 for ob_instance in observer_instances:
                     ob_instance.stop()
                     ob_instance.join()
         else:
-            log.error('conf not found Sync')
+            logger.error('conf not found Sync')
     elif getattr(args, 'push', False):
         load_conf(LogOut='terminal')
-        del CONF
-        from conf import CONF
 
-        log = LOG()
         time_list = {}
         for sd_instance in CONF['Sync']:
             src = sd_instance['source']
@@ -144,8 +135,9 @@ if __name__ == '__main__':
                                 if p.is_file():
                                     size = put_one(src, ps, dst['path'], c)
                                     now_size += size
-                                    log.info(f'{dst["path"]}:progress======>>'
-                                             f'{now_size / full_size * 100}%')
+                                    logger.info(
+                                        f'{dst["path"]}:progress======>>'
+                                        f'{now_size / full_size * 100}%')
                                 elif p.is_dir():
                                     for b, d, f in os.walk(ps):
                                         for fs in f:
@@ -154,19 +146,21 @@ if __name__ == '__main__':
                                             size = put_one(src, src_,
                                                            dst['path'], c)
                                             now_size += size
-                                            log.info(f'{dst["path"]}:'
-                                                     f'progress======>>'
-                                                     f'{now_size / full_size * 100}%')
+                                            logger.info(
+                                                f'{dst["path"]}:'
+                                                f'progress======>>'
+                                                f'{now_size / full_size * 100}%'
+                                            )
                         time_list[dst['path']] = time.time() - start_time
                     except (AuthenticationException, NoValidConnectionsError,
                             socket.timeout, SSHException, socket.error) as e:
-                        LOG().error(e)
+                        logger.error(e)
                         raise ConnectionException(e)
         if time_list:
-            log.info(f'elapsed time:\n{time_list}')
+            logger.info(f'elapsed time:\n{time_list}')
     elif getattr(args, 'conf_gen', None):
         yaml_path, template_yaml = generate_yaml(args.conf_gen)
-        LOG().info(f'配置模板文件路径:  {yaml_path}\n'
-                   f'配置模板文件内容:\n{template_yaml}')
+        logger.info(f'配置模板文件路径:  {yaml_path}\n'
+                    f'配置模板文件内容:\n{template_yaml}')
     else:
         parser.print_help()

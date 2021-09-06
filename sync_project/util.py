@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fabric import Connection
 
-from conf import LOG, DebugMode
+from conf import CONF, logger
 
 
 class ConnectionException(Exception):
@@ -90,30 +90,28 @@ Sync:
     return yaml_path, template_yaml
 
 
-def is_continue(method):
+def enforce(method):
     """
     当为normal模式时, 不捕获异常, 强制继续运行
     :return:
     """
-    log = LOG()
 
     @functools.wraps(method)
     def wrapper(*args, **kwargs):
         try:
             return method(*args, **kwargs)
         except Exception as e:
-            log.warning(method.__str__())
-            log.error(e)
-            assert not DebugMode(), e
+            logger.warning(method.__str__())
+            logger.error(e)
+            assert not CONF.get("DebugMode"), e
     return wrapper
 
 
-@is_continue
+@enforce
 def put_one(base_src: str, src: str, base_dst: str, con: Connection):
-    log = LOG()
     base_src = Path(base_src).absolute().__str__()
     src = Path(src).absolute().__str__()
-    assert Path(src).is_file(), 'src file must be file'
+    assert Path(src).is_file(), 'src must be file'
     dst_path = get_dest_path(base_src, src, base_dst)
     dst_parent = os.path.split(dst_path)[0]
     if dst_path.startswith('/'):
@@ -121,11 +119,11 @@ def put_one(base_src: str, src: str, base_dst: str, con: Connection):
     else:
         # TODO: windows command
         pass
-    log.info(f'src: {src}')
-    log.info(f'pushing to {con.host}: {dst_path}')
+    logger.info(f'src: {src}')
+    logger.info(f'pushing to {con.host}: {dst_path}')
     con.put(src, dst_path, preserve_mode=False)
     file_size = Path(src).stat().st_size
-    log.info(f'file size: {file_size / 1024 / 1024}M')
+    logger.info(f'file size: {file_size / 1024 / 1024}M')
     return file_size
 
 
@@ -147,5 +145,3 @@ def get_dest_path(root_path: str, absolute_path: str, dest_base_path: str):
     else:
         raise ValueError(f'不支持该路径格式: {dest_base_path}')
     return dest_path
-
-

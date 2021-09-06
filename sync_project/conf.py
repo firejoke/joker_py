@@ -12,8 +12,6 @@ from Colorer_log import (
 
 
 CONF = dict()
-LOG = lambda: logger
-DebugMode = lambda: CONF.get('DebugMode')
 
 
 def load_conf(**kwargs):
