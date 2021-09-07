@@ -34,23 +34,36 @@ class SyncEventHandler(RegexMatchingEventHandler):
         self.remote = []
         self.local = []
         for dst in destinations:
-            if dst.keys() != {'host', 'port', 'user', 'password', 'path'}:
-                raise KeyError("host keys must be {'host', 'port', 'user', "
-                               "'password', 'path'}")
+            if set(dst.keys()) - {
+                'path', 'host', 'port', 'user', 'password', 'pkey',
+                'key_filename', 'timeout', 'allow_agent', 'look_for_keys',
+                'compress', 'sock', 'gss_auth', 'gss_kex', 'gss_deleg_creds',
+                'gss_host', 'banner_timeout', 'auth_timeout',
+                'gss_trust_dns', 'passphrase', 'disabled_algorithms'
+            }:
+                raise KeyError(
+                    """host keys must in {
+                'path', 'host', 'port', 'user', 'password', 'pkey',
+                'key_filename', 'timeout', 'allow_agent', 'look_for_keys', 
+                'compress', 'sock', 'gss_auth', 'gss_kex', 'gss_deleg_creds',
+                'gss_host', 'banner_timeout', 'auth_timeout', 
+                'gss_trust_dns', 'passphrase', 'disabled_algorithms'
+            }""")
+            assert dst.get("path", None), "must be a 'path' key"
             if dst['host'] not in('0.0.0.0', '127.0.0.1') and \
                dst['host'].lower() != 'localhost':
-                c = self._create_connection(dst)
-                c.path = dst['path']
+                _path = dst.pop("path")
+                c = self._create_connection(**dst)
+                c.path = _path
                 self.remote.append(c)
             else:
                 self.local.append(dst)
         self.src = source
 
-    def _create_connection(self, dst):
+    def _create_connection(self, **dst):
         assert ip_check(dst['host']), 'host error'
-        with Connection(host=dst['host'], port=dst['port'], user=dst['user'],
-                        connect_kwargs={'password': dst['password']},
-                        connect_timeout=10) as c:
+        with Connection(host=dst.pop('host'), port=dst.pop('port', None),
+                        user=dst.pop('user', None), connect_kwargs=dst) as c:
             return c
 
     def _check_connection(self, connection):
@@ -66,9 +79,11 @@ class SyncEventHandler(RegexMatchingEventHandler):
     def dispatch(self, event):
         tmp_c = copy(self.remote)
         for c in tmp_c:
-            if not self._check_connection:
+            if not self._check_connection(c):
                 self.remote.remove(c)
-                _c = self._create_connection(c.dst)
+                logger.warning("reconnection")
+                _c = self._create_connection(host=c.host, user=c.user,
+                                             port=c.port, **c.connect_kwargs)
                 _c.path = c.path
                 self.remote.append(_c)
         return super(SyncEventHandler, self).dispatch(event)
