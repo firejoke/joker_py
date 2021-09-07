@@ -60,7 +60,7 @@ util_cmd = subcmd.add_parser('util',
                              help='push once project or generate conf file')
 util_cmd.add_argument('--push', action='store_true',
                       help='push once project')
-conf_def_path = (base_path / 'sync_object.yaml').absolute()
+conf_def_path = (base_path / 'sync_project.yaml').absolute()
 util_cmd.add_argument('--conf_gen', action='store_const', const=conf_def_path,
                       help=f'Generate the configuration template file, '
                            f'default path: {conf_def_path}')
@@ -159,6 +159,8 @@ if __name__ == '__main__':
         if time_list:
             logger.info(f'elapsed time:\n{time_list}')
     elif getattr(args, 'conf_gen', None):
+        load_conf(LogOut='terminal')
+
         yaml_path, template_yaml = generate_yaml(args.conf_gen)
         logger.info(f'配置模板文件路径:  {yaml_path}\n'
                     f'配置模板文件内容:\n{template_yaml}')

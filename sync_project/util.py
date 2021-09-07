@@ -56,8 +56,14 @@ Sync:
     - host: host ip
       user: root
       password: pwd
-      port: '22'
+      port: 22
       path: /dst_absolute_path/dst_root_directory/
+      timeout: 10
+    - host: other host
+      user: root
+      password: pwd
+      port: 22
+      path: /other_dst_absolute_path/dst_root_directory/
     # 正则匹配规则
     regexes:
       - .*
@@ -73,8 +79,10 @@ Sync:
       - host: host ip
         user: root
         password: pwd
-        port: '22'
+        port: 22
         path: /dst_absolute_path/dst_root_directory/
+      - host: localhost
+        path: E:\\other_absolute_path\\dst_root_directory\\
     regexes:
       - .*
     ignore_regexes:
@@ -85,7 +93,7 @@ Sync:
     ignore_directories: false
     case_sensitive: true
     """
-    with open(yaml_path, 'w') as f:
+    with open(yaml_path, 'w', encoding="utf8") as f:
         f.write(template_yaml)
     return yaml_path, template_yaml
 
