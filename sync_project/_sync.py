@@ -68,7 +68,7 @@ class SyncEventHandler(RegexMatchingEventHandler):
 
     def _check_connection(self, connection):
         try:
-            connection.open()
+            connection.run("hostname", hide=True, warn=True)
             return True
         except (AuthenticationException, NoValidConnectionsError,
                     socket.timeout, SSHException, socket.error) as e:

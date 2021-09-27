@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from Colorer_log import (
+from colour import (
     logger, INFO, WARN, ERROR, DEBUG, TerminalH, FileH, DEBUG_FORMAT, )
 
 
