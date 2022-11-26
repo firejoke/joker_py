@@ -41,7 +41,7 @@ def convert(file_path):
                     if TAGS[tag][k]["type"] == TYPES.Undefined:
                         if not isinstance(v, bytes):
                             exif_dict[tag][k] = bytes(v)
-        print(exif_dict)
+        # print(exif_dict)
         exif_bytes = exif_dump(exif_dict)
         
         # Save image as jpeg
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     if path.is_dir():
         for _path in path.iterdir():
             if _path.is_file() and _path.name.lower().endswith("heic"):
-                convert(_path.absolute())
+                convert(_path.absolute().as_posix())
     elif path.is_file():
         convert(path.absolute().as_posix())
     else:
